@@ -1,3 +1,4 @@
+import random
 import signal
 import time
 
@@ -32,13 +33,20 @@ def main():
 
     for i in range(5):
         print("working", i + 1)
+
+        if random.random() >= 0.5:
+            print("crashing")
+            raise Exception("crash")
+
         time.sleep(2)
+
         if worker_state == "stopping":
             print("stopped")
             break
 
-    time.sleep(5)
+    time.sleep(2)
 
     print("done")
+
 
 main()
