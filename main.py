@@ -13,8 +13,12 @@ def start_work(signum, frame):
 
 def stop_work(signum, frame):
     global worker_state
-    print("stopping")
-    worker_state = "stopping"
+
+    if worker_state != "working":
+        print("not working so ignoring signal to stop")
+    else:
+        print("stopping")
+        worker_state = "stopping"
 
 
 signal.signal(signal.SIGUSR1, start_work)
