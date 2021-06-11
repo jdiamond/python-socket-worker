@@ -19,7 +19,7 @@ def on_connect(client):
 def on_message(client, message):
     global worker_process
 
-    print("received message", message)
+    print("received message from socket client: {}".format(message))
 
     if message == "start":
         worker_process.send_signal(signal.SIGUSR1)
@@ -32,15 +32,18 @@ def on_message(client, message):
 def worker_reader(client, my_worker):
     global worker_process
 
-    print("worker_reader thread started")
+    print("worker_reader thread started for pid {}".format(my_worker.pid))
 
     for line in iter(my_worker.stdout.readline, b""):
         message = line.decode("ascii").strip()
 
-        print('received "{}" from worker'.format(message))
+        print(
+            "received message from worker process pid {}: {}".format(
+                my_worker.pid, message
+            )
+        )
 
         if message == "stopped":
-            worker_process = None
             start_worker(client)
         if client.state == "connected":
             client.send(message)
@@ -54,7 +57,6 @@ def worker_reader(client, my_worker):
     if worker_process == my_worker:
         print("pid {} did not exit cleanly".format(my_worker.pid))
 
-        worker_process = None
         start_worker(client)
 
     print("worker_reader thread for pid {} is exiting".format(my_worker.pid))
@@ -62,10 +64,6 @@ def worker_reader(client, my_worker):
 
 def start_worker(client):
     global worker_process
-
-    if worker_process:
-        print("worker already started")
-        return
 
     print("starting new worker_process")
 
@@ -94,16 +92,13 @@ def start_worker(client):
 
 
 def stop_worker():
-    global worker_process
-
     if not worker_process:
         print("worker not started")
         return
 
-    print("sending signal to stop pid {}".format(worker_process.pid))
+    print("sending signal to stop to pid {}".format(worker_process.pid))
 
     worker_process.send_signal(signal.SIGUSR2)
-    worker_process = None
 
 
 parser = argparse.ArgumentParser(description="daemon")
