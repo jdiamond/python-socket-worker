@@ -36,6 +36,7 @@ def main():
 
         if random.random() >= 0.5:
             print("crashing")
+            time.sleep(1)
             raise Exception("crash")
 
         time.sleep(2)
