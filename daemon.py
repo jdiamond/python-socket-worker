@@ -27,12 +27,12 @@ def on_message(client, message):
         print("unknown message", message)
 
 
-def worker_reader(client):
+def worker_reader(client, my_worker):
     global worker_process
     print("worker_reader thread started")
-    for line in iter(worker_process.stdout.readline, b""):
+    for line in iter(my_worker.stdout.readline, b""):
         message = line.decode("ascii").strip()
-        print('received "{}" from worker_process'.format(message))
+        print('received "{}" from worker'.format(message))
         if message == "stopped":
             worker_process = None
             start_worker(client)
@@ -40,6 +40,13 @@ def worker_reader(client):
             client.send(message)
         else:
             print("cannot send message because client state is {}".format(client.state))
+    # When we get here, the child process has exited. If it exited cleanly, it
+    # would have sent "stopped" and we would have already started a replacement.
+    # If the global worker_process is the same as my_worker, that means we did
+    # not receive "stopped" so did not start a new worker process.
+    if worker_process == my_worker:
+        worker_process = None
+        start_worker(client)
     print("worker_reader thread exiting")
 
 
@@ -58,7 +65,13 @@ def start_worker(client):
     # This function gets called from the thread running `client.loop_forever` so
     # it can't block or we will stop receiving messages. Start a new thread to
     # read from the subprocess.
-    reader_thread = threading.Thread(target=worker_reader, args=(client,))
+    reader_thread = threading.Thread(
+        target=worker_reader,
+        args=(
+            client,
+            worker_process,
+        ),
+    )
     reader_thread.start()
 
 
